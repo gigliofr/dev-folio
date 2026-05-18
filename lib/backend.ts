@@ -2,6 +2,24 @@ import { posts, projects, skills, stats } from '@/lib/content';
 import type { Post, Project } from '@/lib/content';
 
 const apiBaseUrl = process.env.DEVFOLIO_API_URL?.replace(/\/$/, '');
+const authTokenKey = 'devfolio_token';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.sessionStorage.getItem(authTokenKey) ?? window.localStorage.getItem(authTokenKey);
+}
+
+export function setAuthToken(token: string) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(authTokenKey, token);
+  window.localStorage.removeItem(authTokenKey);
+}
+
+export function clearAuthToken() {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.removeItem(authTokenKey);
+  window.localStorage.removeItem(authTokenKey);
+}
 
 async function fetchJson<T>(path: string, fallback: T): Promise<T> {
   if (!apiBaseUrl) {
@@ -48,8 +66,7 @@ export async function getPostBySlug(slug: string) {
 }
 
 function authHeader(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  const token = localStorage.getItem('devfolio_token');
+  const token = getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -81,7 +98,7 @@ export async function adminLogin(credentials: { username?: string; password?: st
   if (!res.ok) return null;
   const data = await res.json();
   if (data?.token) {
-    localStorage.setItem('devfolio_token', data.token);
+    setAuthToken(data.token);
     return data.token;
   }
   return null;
@@ -160,7 +177,11 @@ export async function getContactSubmissions(): Promise<Array<{ name: string; ema
   try {
     const res = await fetch(`${base}/api/v1/contact`, { headers: authHeader() });
     if (!res.ok) return [];
-    return (await res.json()) as Array<{ name: string; email: string; message: string; createdAt?: string }>;
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return data as Array<{ name: string; email: string; message: string; createdAt?: string }>;
+    }
+    return (data?.submissions ?? []) as Array<{ name: string; email: string; message: string; createdAt?: string }>;
   } catch {
     return [];
   }

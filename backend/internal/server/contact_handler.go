@@ -1,18 +1,10 @@
 package server
 
 import (
+	"errors"
 	"encoding/json"
 	"net/http"
-	"time"
-
-	"devfolio/backend/internal/domain"
 )
-
-type contactRequest struct {
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Message string `json:"message"`
-}
 
 func (s *Server) handleContact(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -20,38 +12,32 @@ func (s *Server) handleContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req contactRequest
+	var req ContactRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		s.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 		return
 	}
 
-	// Validate required fields
-	if req.Name == "" || req.Email == "" || req.Message == "" {
-		s.writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name, email, and message are required"})
+	submission, err := s.contactService.Submit(req.Name, req.Email, req.Message)
+	if err != nil {
+		status := http.StatusInternalServerError
+		message := "could not save submission"
+		switch {
+		case errors.Is(err, ErrContactInvalid):
+			status = http.StatusBadRequest
+			message = "name, email, and message are required"
+		case errors.Is(err, ErrContactRateLimit):
+			status = http.StatusTooManyRequests
+			message = "too many submissions from this email, please try again later"
+		case errors.Is(err, ErrContactNotify):
+			status = http.StatusBadGateway
+			message = "message saved but email notification failed"
+		}
+		s.writeJSON(w, status, map[string]string{"error": message})
 		return
 	}
 
-	// Check rate limit by email
-	if !s.rateLimiter.Allow(req.Email) {
-		s.writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many submissions from this email, please try again later"})
-		return
-	}
-
-	// Save submission
-	submission := domain.ContactSubmission{
-		Name:      req.Name,
-		Email:     req.Email,
-		Message:   req.Message,
-		CreatedAt: time.Now(),
-	}
-
-	if err := s.store.SaveContactSubmission(submission); err != nil {
-		s.writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not save submission"})
-		return
-	}
-
-	s.writeJSON(w, http.StatusCreated, map[string]string{"message": "submission received"})
+	s.writeJSON(w, http.StatusCreated, map[string]string{"message": "submission received", "name": submission.Name})
 }
 
 func (s *Server) handleListContacts(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +51,6 @@ func (s *Server) handleListContacts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	submissions := s.store.ListContactSubmissions()
-	s.writeJSON(w, http.StatusOK, submissions)
+	submissions := s.contactService.List()
+	s.writeJSON(w, http.StatusOK, map[string]any{"submissions": submissions, "count": len(submissions)})
 }

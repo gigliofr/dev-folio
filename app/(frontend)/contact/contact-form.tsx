@@ -32,10 +32,11 @@ export function ContactForm() {
 
   return (
     <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-8">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" aria-busy={isLoading}>
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Name</label>
+          <label htmlFor="contact-name" className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Name</label>
           <input
+            id="contact-name"
             type="text"
             name="name"
             value={formData.name}
@@ -43,12 +44,15 @@ export function ContactForm() {
             placeholder="Your name"
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             required
+            autoComplete="name"
+            disabled={isLoading}
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Email</label>
+          <label htmlFor="contact-email" className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Email</label>
           <input
+            id="contact-email"
             type="email"
             name="email"
             value={formData.email}
@@ -56,12 +60,15 @@ export function ContactForm() {
             placeholder="your.email@example.com"
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             required
+            autoComplete="email"
+            disabled={isLoading}
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Message</label>
+          <label htmlFor="contact-message" className="mb-2 block text-sm font-medium text-[var(--text-primary)]">Message</label>
           <textarea
+            id="contact-message"
             name="message"
             value={formData.message}
             onChange={handleChange}
@@ -69,6 +76,8 @@ export function ContactForm() {
             rows={5}
             className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-4 py-2 text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
             required
+            minLength={10}
+            disabled={isLoading}
           />
         </div>
 
@@ -83,6 +92,8 @@ export function ContactForm() {
 
       {message && (
         <div
+          role="status"
+          aria-live="polite"
           className={`mt-4 rounded-lg border p-4 text-sm ${
             message.type === 'success'
               ? 'border-green-900/50 bg-green-900/20 text-green-400'

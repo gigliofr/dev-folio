@@ -9,16 +9,16 @@ import (
 )
 
 type Server struct {
-	store       store.Repository
-	mux         *http.ServeMux
-	rateLimiter *RateLimiter
+	store          store.Repository
+	mux            *http.ServeMux
+	contactService *ContactService
 }
 
 func New(repository store.Repository) *Server {
 	server := &Server{
-		store:       repository,
-		mux:         http.NewServeMux(),
-		rateLimiter: NewRateLimiter(1*time.Hour, 5), // 5 submissions per hour per email
+		store:          repository,
+		mux:            http.NewServeMux(),
+		contactService: NewContactService(repository, NewRateLimiter(1*time.Hour, 5), NewSMTPContactNotifierFromEnv()),
 	}
 	server.routes()
 	return server

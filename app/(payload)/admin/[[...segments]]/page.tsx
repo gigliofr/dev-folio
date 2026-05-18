@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { adminLogin, adminMe, getProjects, getPosts, createProject, updateProject, deleteProject, createPost, updatePost, deletePost, uploadFile, getContactSubmissions } from '@/lib/backend';
+import { adminLogin, adminMe, getProjects, getPosts, createProject, updateProject, deleteProject, createPost, updatePost, deletePost, uploadFile, getContactSubmissions, clearAuthToken, getAuthToken } from '@/lib/backend';
 import type { Project, Post } from '@/lib/content';
 
 type Tab = 'projects' | 'posts' | 'contacts';
@@ -51,7 +51,7 @@ export default function AdminPage() {
   const maxPage = Math.ceil(totalContacts / pageSize) || 1;
 
   useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('devfolio_token') : null;
+    const t = getAuthToken();
     if (t) {
       setToken(t);
       adminMe().then((me) => setUser(me));
@@ -63,7 +63,7 @@ export default function AdminPage() {
     setProjects(await getProjects() || []);
     setPosts(await getPosts() || []);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('devfolio_token') : null;
+      const token = getAuthToken();
       if (token) {
         setContacts(await getContactSubmissions() || []);
       }
@@ -87,6 +87,7 @@ export default function AdminPage() {
       setUser(await adminMe());
       setUsername('');
       setPassword('');
+      await refreshData();
       showMessage('✓ Logged in');
     } else {
       showMessage('✗ Login failed');
@@ -97,7 +98,7 @@ export default function AdminPage() {
   function handleLogout() {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('devfolio_token');
+    clearAuthToken();
   }
 
   // Projects
@@ -218,18 +219,21 @@ export default function AdminPage() {
             <div className="mt-8 flex gap-4 border-b border-[var(--border)]">
               <button
                 onClick={() => setTab('projects')}
+                aria-pressed={tab === 'projects'}
                 className={`pb-3 text-sm font-medium ${tab === 'projects' ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`}
               >
                 Projects ({projects.length})
               </button>
               <button
                 onClick={() => setTab('posts')}
+                aria-pressed={tab === 'posts'}
                 className={`pb-3 text-sm font-medium ${tab === 'posts' ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`}
               >
                 Posts ({posts.length})
               </button>
               <button
                 onClick={() => setTab('contacts')}
+                aria-pressed={tab === 'contacts'}
                 className={`pb-3 text-sm font-medium ${tab === 'contacts' ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]' : 'text-[var(--text-secondary)]'}`}
               >
                 Contacts ({contacts.length})
@@ -482,6 +486,7 @@ export default function AdminPage() {
                       value={sortKey}
                       onChange={(e) => { setSortKey(e.target.value as any); setPage(1); }}
                       className="input px-2 py-1 text-sm"
+                      aria-label="Sort contacts"
                     >
                       <option value="createdAt">Date</option>
                       <option value="name">Name</option>
@@ -490,6 +495,7 @@ export default function AdminPage() {
                     <button
                       onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}
                       className="btn-ghost text-sm px-2 py-1"
+                      aria-pressed={sortDir === 'asc'}
                     >
                       {sortDir === 'asc' ? '↑ Asc' : '↓ Desc'}
                     </button>
@@ -500,6 +506,7 @@ export default function AdminPage() {
                       value={pageSize}
                       onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
                       className="input px-2 py-1 text-sm"
+                      aria-label="Contacts per page"
                     >
                       <option value={5}>5</option>
                       <option value={10}>10</option>

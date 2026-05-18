@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { getProjectBySlug } from '@/lib/backend';
 import { projects } from '@/lib/content';
 import { site } from '@/lib/site';
@@ -46,7 +47,7 @@ export default async function ProjectDetailsPage({ params }: ProjectDetailsPageP
           <p className="text-lg leading-8 text-[var(--text-secondary)]">{project.descriptionLong}</p>
 
           <div className="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--surface)]">
-            <img src={project.image} alt={project.title} className="h-80 w-full object-cover" />
+            <Image src={project.image} alt={project.title} width={1200} height={600} className="h-80 w-full object-cover" />
           </div>
 
           <div className="flex flex-wrap gap-2">

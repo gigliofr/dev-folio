@@ -3,6 +3,8 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"devfolio/backend/internal/store"
@@ -25,6 +27,14 @@ func New(repository store.Repository) *Server {
 }
 
 func (s *Server) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
+	// Security headers (applied to all responses)
+	responseWriter.Header().Set("X-Content-Type-Options", "nosniff")
+	responseWriter.Header().Set("X-Frame-Options", "DENY")
+	responseWriter.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	responseWriter.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+	// Basic CSP — adjust as needed for third-party assets
+	responseWriter.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none';")
+
 	if request.Method == http.MethodOptions {
 		s.writeCORS(responseWriter, request)
 		responseWriter.WriteHeader(http.StatusNoContent)
@@ -64,10 +74,27 @@ func (s *Server) routes() {
 
 func (s *Server) writeCORS(responseWriter http.ResponseWriter, request *http.Request) {
 	origin := request.Header.Get("Origin")
-	if origin == "" {
-		responseWriter.Header().Set("Access-Control-Allow-Origin", "*")
+	allowedEnv := os.Getenv("DEVFOLIO_ALLOWED_ORIGINS") // comma-separated list
+	if allowedEnv == "" {
+		// Default behavior: allow all
+		if origin == "" {
+			responseWriter.Header().Set("Access-Control-Allow-Origin", "*")
+		} else {
+			responseWriter.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 	} else {
-		responseWriter.Header().Set("Access-Control-Allow-Origin", origin)
+		allowed := strings.Split(allowedEnv, ",")
+		found := false
+		for _, a := range allowed {
+			if strings.TrimSpace(a) == origin {
+				found = true
+				break
+			}
+		}
+		if found {
+			responseWriter.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		// if not found: intentionally do not set the header (browser will block)
 	}
 	responseWriter.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 	responseWriter.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

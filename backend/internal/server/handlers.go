@@ -62,6 +62,8 @@ func (s *Server) handleSkills(responseWriter http.ResponseWriter, request *http.
 func (s *Server) handleProjects(responseWriter http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case http.MethodGet:
+		// Cache public project lists for 1 hour (CDN can cache longer)
+		responseWriter.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400")
 		featuredOnly := request.URL.Query().Get("featured") == "true"
 		statusFilter := strings.TrimSpace(request.URL.Query().Get("status"))
 		s.writeJSON(responseWriter, http.StatusOK, s.store.ListProjects(featuredOnly, statusFilter))
@@ -89,6 +91,8 @@ func (s *Server) handleProjectBySlug(responseWriter http.ResponseWriter, request
 
 	switch request.Method {
 	case http.MethodGet:
+		// Cache individual project pages for 1 hour
+		responseWriter.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400")
 		project, found := s.store.GetProject(slug)
 		if !found {
 			http.NotFound(responseWriter, request)
@@ -131,6 +135,8 @@ func (s *Server) handleProjectBySlug(responseWriter http.ResponseWriter, request
 func (s *Server) handlePosts(responseWriter http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case http.MethodGet:
+		// Cache posts list for 1 hour
+		responseWriter.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400")
 		s.writeJSON(responseWriter, http.StatusOK, s.store.ListPosts())
 	case http.MethodPost:
 		if !s.requireAdmin(responseWriter, request) {
@@ -156,6 +162,8 @@ func (s *Server) handlePostBySlug(responseWriter http.ResponseWriter, request *h
 
 	switch request.Method {
 	case http.MethodGet:
+		// Cache individual post for 1 hour
+		responseWriter.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400")
 		post, found := s.store.GetPost(slug)
 		if !found {
 			http.NotFound(responseWriter, request)
